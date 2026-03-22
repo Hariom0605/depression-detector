@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Depression Early Detector</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .main {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Left — video */
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-box {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid #222;
+    }
+
+    .video-box img {
+      display: block;
+      width: 480px;
+      max-width: 100%;
+    }
+
+    /* Risk meter */
+    .risk-card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid #2a2a2a;
+    }
+
+    .risk-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .risk-level {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      transition: color 0.4s;
+    }
+
+    .risk-message {
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    /* Right panel */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Emotion bars */
+    .emotion-bar-wrap {
+      margin-bottom: 10px;
+    }
+
+    .emotion-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #ccc;
+    }
+
+    .bar-bg {
+      background: #2a2a2a;
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease;
+    }
+
+    /* Dominant emotion */
+    .dominant {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 6px;
+    }
+
+    .dominant-label {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      text-transform: capitalize;
+    }
+
+    /* Chart */
+    .chart-wrap {
+      position: relative;
+      height: 180px;
+    }
+
+    /* Resources */
+    .resource-item {
+      background: #111;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border-left: 3px solid #7F77DD;
+    }
+
+    .resource-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .resource-num {
+      font-size: 13px;
+      color: #7F77DD;
+    }
+
+    .disclaimer {
+      text-align: center;
+      font-size: 11px;
+      color: #444;
+      margin-top: 24px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .emotion-emoji {
+      font-size: 16px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧠 Early Depression Screening Tool</h1>
+  <p class="subtitle">Real-time facial emotion analysis — Not a medical diagnosis</p>
+
+  <div class="main">
+
+    <!-- Left -->
+    <div class="video-section">
+      <div class="video-box">
+        <img src="/video_feed" alt="Webcam">
+      </div>
+
+      <div class="risk-card">
+        <div class="risk-label">Current Risk Level</div>
+        <div class="risk-level" id="risk-level">Analyzing...</div>
+        <div class="risk-message" id="risk-message">Thoda ruko...</div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-panel">
+
+      <!-- Dominant emotion -->
+      <div class="card">
+        <h3>Dominant Emotion</h3>
+        <div class="dominant" id="dominant-emoji">😐</div>
+        <div class="dominant-label" id="dominant-text">neutral</div>
+      </div>
+
+      <!-- Emotion bars -->
+      <div class="card">
+        <h3>Emotion Breakdown</h3>
+        <div id="emotion-bars"></div>
+      </div>
+
+      <!-- History chart -->
+      <div class="card">
+        <h3>Emotion History (last 60s)</h3>
+        <div class="chart-wrap">
+          <canvas id="historyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Resources -->
+      <div class="card">
+        <h3>Mental Health Resources 🇮🇳</h3>
+        <div class="resource-item">
+          <div class="resource-name">iCall — TISS</div>
+          <div class="resource-num">📞 9152987821</div>
+        </div>
+        <div class="resource-item">
+          <div class="resource-name">Vandrevala Foundation</div>
+          <div class="resource-num">📞 1860-2662-345 (24/7)</div>
+        </div>
+        <div class="resource-item">
+          <div class="resource-name">NIMHANS Helpline</div>
+          <div class="resource-num">📞 080-46110007</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    ⚠️ This tool is for educational purposes only. It is NOT a medical device or diagnostic tool.
+    If you are experiencing mental health issues, please consult a qualified professional.
+  </p>
+
+  <!-- Chart.js setup -->
+  <script>
+    const EMOTION_COLORS = {
+      happy:    '#1D9E75',
+      sad:      '#378ADD',
+      angry:    '#E24B4A',
+      fear:     '#7F77DD',
+      disgust:  '#BA7517',
+      surprise: '#EF9F27',
+      neutral:  '#888780'
+    }
+
+    const EMOTION_EMOJIS = {
+      happy: '😊', sad: '😢', angry: '😠',
+      fear: '😨', disgust: '🤢', surprise: '😲', neutral: '😐'
+    }
+
+    // Chart setup
+    const ctx = document.getElementById('historyChart').getContext('2d')
+    const historyChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Depression Score',
+            data: [],
+            borderColor: '#E24B4A',
+            backgroundColor: 'rgba(226,75,74,0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 0
+          },
+          {
+            label: 'Positive Score',
+            data: [],
+            borderColor: '#1D9E75',
+            backgroundColor: 'rgba(29,158,117,0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1a1a1a' } },
+          y: {
+            min: 0, max: 100,
+            ticks: { color: '#555', font: { size: 10 } },
+            grid: { color: '#1a1a1a' }
+          }
+        }
+      }
+    })
+
+    // Update analysis every second
+    function updateAnalysis() {
+      fetch('/get_analysis')
+        .then(r => r.json())
+        .then(data => {
+          // Risk level
+          const riskEl = document.getElementById('risk-level')
+          const msgEl  = document.getElementById('risk-message')
+          riskEl.textContent = data.risk_level || 'Analyzing...'
+          msgEl.textContent  = data.risk_message || ''
+
+          const colorMap = {
+            green: '#1D9E75', orange: '#EF9F27',
+            red: '#E24B4A',   gray: '#888'
+          }
+          riskEl.style.color = colorMap[data.risk_color] || '#888'
+
+          // Dominant emotion
+          const dom = data.dominant_emotion || 'neutral'
+          document.getElementById('dominant-emoji').textContent = EMOTION_EMOJIS[dom] || '😐'
+          document.getElementById('dominant-text').textContent  = dom
+
+          // Emotion bars
+          const barsEl = document.getElementById('emotion-bars')
+          if (data.emotions && Object.keys(data.emotions).length > 0) {
+            barsEl.innerHTML = Object.entries(data.emotions)
+              .sort((a, b) => b[1] - a[1])
+              .map(([emotion, score]) => `
+                <div class="emotion-bar-wrap">
+                  <div class="emotion-label">
+                    <span>${EMOTION_EMOJIS[emotion] || ''} ${emotion}</span>
+                    <span>${score.toFixed(1)}%</span>
+                  </div>
+                  <div class="bar-bg">
+                    <div class="bar-fill"
+                         style="width:${score}%;background:${EMOTION_COLORS[emotion] || '#888'}">
+                    </div>
+                  </div>
+                </div>
+              `).join('')
+          }
+        })
+    }
+
+    // Update chart every 2 seconds
+    function updateChart() {
+      fetch('/get_history')
+        .then(r => r.json())
+        .then(history => {
+          if (!history.length) return
+          historyChart.data.labels = history.map(h => h.time + 's')
+          historyChart.data.datasets[0].data = history.map(h => h.depression_score)
+          historyChart.data.datasets[1].data = history.map(h => h.positive_score)
+          historyChart.update('none')
+        })
+    }
+
+    setInterval(updateAnalysis, 1000)
+    setInterval(updateChart, 2000)
+    updateAnalysis()
+  </script>
+
+</body>
+</html>
